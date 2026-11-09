@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "InterPay",
+    "slug": "interpay",
+    "scheme": "interpay",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FFFFFF",
+    "ios": { "supportsTablet": true, "bundleIdentifier": "app.interpay.mobile" },
+    "android": { "package": "app.interpay.mobile" },
+    "plugins": [
+      "expo-router",
+      ["expo-camera", { "cameraPermission": "Allow InterPay to scan ticket QR codes at the door." }]
+    ]
+  }
+}

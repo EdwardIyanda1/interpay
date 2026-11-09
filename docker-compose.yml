@@ -1,0 +1,30 @@
+# Backend plus PostgreSQL. Set SECRET_KEY and ADMIN_PASSWORD in your shell or an .env file first.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: interpay
+      POSTGRES_PASSWORD: interpay
+      POSTGRES_DB: interpay
+    volumes: [dbdata:/var/lib/postgresql/data]
+  api:
+    build: ./backend
+    ports: ["8000:8000"]
+    depends_on: [db]
+    environment:
+      DATABASE_URL: postgresql+psycopg://interpay:interpay@db:5432/interpay
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD}
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:8000}
+      WEB_BASE_URL: ${WEB_BASE_URL:-http://localhost:5173}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      PAYMENT_GATEWAY: ${PAYMENT_GATEWAY:-simulated}
+      IPG_MODE: ${IPG_MODE:-TEST}
+      IPG_MERCHANT_CODE: ${IPG_MERCHANT_CODE:-}
+      IPG_PAY_ITEM_ID: ${IPG_PAY_ITEM_ID:-}
+      MAIL_MODE: ${MAIL_MODE:-console}
+    volumes: [uploads:/app/uploads, mail:/app/mail_outbox]
+volumes:
+  dbdata:
+  uploads:
+  mail:

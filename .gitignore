@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+*.db
+uploads/
+mail_outbox/
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+.expo/
+
+/web/node_modules/
+/mobile/node_modules/
