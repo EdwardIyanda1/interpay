@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { Link, Route, Routes, useNavigate } from "react-router-dom";
 import { api, getToken, setToken } from "./api";
+import { BrandLogo } from "./ui";
 import Home from "./pages/Home";
 import EventPage from "./pages/EventPage";
 import TicketPage from "./pages/TicketPage";
@@ -28,7 +29,8 @@ export default function App() {
   }, []);
 
   const auth: Auth = {
-    user, ready,
+    user,
+    ready,
     signIn: (t, u) => { setToken(t); setUser(u); },
     signOut: () => { setToken(null); setUser(null); nav("/"); },
   };
@@ -37,21 +39,27 @@ export default function App() {
     <AuthCtx.Provider value={auth}>
       <header className="site-header">
         <div className="bar">
-          <Link to="/" className="logo"><img src="/favicon.svg" alt="" />InterPay</Link>
+          <Link to="/" className="logo" aria-label="InterPay home">
+            <BrandLogo size={34} />
+          </Link>
           <nav aria-label="Main">
-            <Link to="/">Events</Link>
+            <Link to="/#events">Events</Link>
+            <Link to="/#how">How it works</Link>
             <Link to="/find-tickets">Find my tickets</Link>
             {user ? (
               <>
-                <Link to={user.role === "admin" ? "/admin" : "/organiser"}>{user.role === "admin" ? "Admin" : "My events"}</Link>
+                <Link to={user.role === "admin" ? "/admin" : "/organiser"}>
+                  {user.role === "admin" ? "Admin" : "My events"}
+                </Link>
                 <button className="btn ghost small" onClick={auth.signOut}>Sign out</button>
               </>
             ) : (
-              <Link to="/login">Organiser sign in</Link>
+              <Link className="btn small" to="/login">Organiser sign in</Link>
             )}
           </nav>
         </div>
       </header>
+
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/event/:slug/:year" element={<EventPage />} />
@@ -65,13 +73,25 @@ export default function App() {
         <Route path="/privacy" element={<Privacy />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
+
       <footer className="site-footer">
-        <div className="inner">
-          <nav aria-label="Footer" style={{ marginLeft: 0 }}>
+        <div className="inner footer-grid">
+          <div className="footer-brand">
+            <Link to="/" className="logo">
+              <BrandLogo size={28} />
+            </Link>
+            <p className="muted small" style={{ margin: "8px 0 0", maxWidth: 460 }}>
+              Event registration with escrow protection and automated payouts. Built on the Interswitch Payment Gateway.
+            </p>
+          </div>
+          <nav aria-label="Footer" className="footer-links">
             <Link to="/terms">Terms and Conditions</Link>
             <Link to="/privacy">Privacy Policy</Link>
             <Link to="/find-tickets">Find my tickets</Link>
+            <Link to="/login">Organiser portal</Link>
           </nav>
+        </div>
+        <div className="inner footer-legal">
           <span>InterPay is a hackathon project built on the Interswitch Payment Gateway. It is not an official Interswitch product.</span>
         </div>
       </footer>
