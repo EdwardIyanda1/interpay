@@ -1,6 +1,10 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv()  # reads backend/.env without overriding variables already set
+
 
 def _e(key, default=""):
     return os.environ.get(key, default)

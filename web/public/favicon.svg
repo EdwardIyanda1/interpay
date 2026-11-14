@@ -1,17 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
-  <!-- Tilted Blue Ticket -->
-  <g transform="rotate(-32 54 54)">
-    <path d="M12 34C12 29.5817 15.5817 26 20 26H92C96.4183 26 100 29.5817 100 34V43C93.9249 43 89 47.9249 89 54C89 60.0751 93.9249 65 100 65V74C100 78.4183 96.4183 82 92 82H20C15.5817 82 12 78.4183 12 74V65C18.0751 65 23 60.0751 23 54C23 47.9249 18.0751 43 12 43V34Z" fill="#1F4FD8" />
-    <!-- Ticket Stub Perforation Lines -->
-    <line x1="34" y1="30" x2="34" y2="78" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="5 6" />
-    <line x1="78" y1="30" x2="78" y2="78" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="5 6" />
-    <!-- Ticket Detail Bars -->
-    <line x1="45" y1="48" x2="67" y2="48" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" />
-    <line x1="45" y1="59" x2="60" y2="59" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" />
-  </g>
-
-  <!-- Escrow Protection Shield with White Cutout Border -->
-  <path d="M82 50L108 60V79C108 96.5 96.8 109.8 82 115C67.2 109.8 56 96.5 56 79V60L82 50Z" fill="#16794C" stroke="#FFFFFF" stroke-width="6" stroke-linejoin="round" />
-  <!-- Shield Checkmark -->
-  <path d="M72 82.5L79 89.5L93 74.5" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" />
+  <rect x="10" y="10" width="100" height="100" rx="24" fill="#1F4FD8" />
+  <path d="M60 32V88M32 60H88" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" />
+  <circle cx="88" cy="32" r="14" fill="#16794C" stroke="#FFFFFF" stroke-width="4" />
 </svg>

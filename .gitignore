@@ -9,6 +9,3 @@ __pycache__/
 .venv/
 venv/
 .expo/
-
-/web/node_modules/
-/mobile/node_modules/

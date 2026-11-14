@@ -27,12 +27,28 @@ docker-compose.yml  Backend plus PostgreSQL
 
 ### 1. Backend (Python 3.11 or newer)
 
+macOS or Linux:
+
 ```bash
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env            # then edit it; export the variables or use a tool that loads .env
-export SECRET_KEY="a-long-random-string" ADMIN_PASSWORD="choose-a-password"
+cp .env.example .env
+```
+
+Windows PowerShell:
+
+```powershell
+cd backend
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+Copy-Item .env.example .env
+```
+
+Then open `backend/.env` and set `SECRET_KEY` and `ADMIN_PASSWORD` (the backend reads this file automatically). Generate a key with `python -c "import secrets; print(secrets.token_urlsafe(48))"`.
+
+```bash
 python -m app.seed              # optional demo organiser and event
 uvicorn app.main:app --reload
 ```

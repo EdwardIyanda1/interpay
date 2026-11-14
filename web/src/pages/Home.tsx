@@ -1,369 +1,243 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { EventCard, formatDateTime, naira } from "@shared";
-import { api } from "../api";
-import { usePageMeta } from "../meta";
-import { Badge, CategoryArt, MODE_LABEL } from "../ui";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  QUICK_SYMPTOM_PRESETS,
+  evaluatePatientTriage,
+  getMedicalServices,
+} from "../clinicalStore";
+import { formatNairaFromKobo, getIpgSettings } from "../ipg";
 
 export default function Home() {
-  const [events, setEvents] = useState<EventCard[] | null>(null);
-  const [error, setError] = useState("");
-  const [search, setSearch] = useState("");
-  const [modeFilter, setModeFilter] = useState<string>("ALL");
+  const nav = useNavigate();
+  const services = getMedicalServices();
+  const ipg = getIpgSettings();
 
-  usePageMeta({
-    title: "Your flyer. Your ticket page. Protected in escrow.",
-    description:
-      "Upload your flyer, publish your event page, and collect ticket payments through Interswitch IPG with built-in escrow protection.",
-    path: "/",
-    jsonLd: { "@context": "https://schema.org", "@type": "WebSite", name: "InterPay", url: location.origin },
-  });
+  const [quickSymptoms, setQuickSymptoms] = useState(QUICK_SYMPTOM_PRESETS[0].symptoms);
+  const [quickTemp, setQuickTemp] = useState(QUICK_SYMPTOM_PRESETS[0].temp);
+  const [quickBp, setQuickBp] = useState(QUICK_SYMPTOM_PRESETS[0].bp);
 
-  useEffect(() => {
-    api<EventCard[]>("/api/events", { auth: false })
-      .then(setEvents)
-      .catch((e) => setError(e.message));
-  }, []);
-
-  const filteredEvents = useMemo(() => {
-    if (!events) return null;
-    return events.filter((e) => {
-      const matchesMode = modeFilter === "ALL" || e.attendance_mode === modeFilter;
-      const q = search.trim().toLowerCase();
-      const matchesQuery =
-        !q ||
-        e.title.toLowerCase().includes(q) ||
-        e.category.toLowerCase().includes(q) ||
-        (e.venue_name ?? "online").toLowerCase().includes(q);
-      return matchesMode && matchesQuery;
+  const runInstantTriage = (e: React.FormEvent) => {
+    e.preventDefault();
+    evaluatePatientTriage({
+      patientName: "Walk-in Patient",
+      ageGroup: "Adult (18-59 yrs)",
+      symptoms: quickSymptoms,
+      duration: "1-3 days",
+      temperatureC: quickTemp,
+      systolicBp: quickBp,
     });
-  }, [events, search, modeFilter]);
-
-  const heroEvent = events && events.length > 0 ? events[0] : null;
+    nav("/triage");
+  };
 
   return (
     <div>
-      {/* FULL-BLEED DARK NAVY GRID HERO */}
-      <section className="relative bg-navy text-white overflow-hidden py-14 sm:py-20 lg:py-24 border-b border-white/10">
-        {/* Blueprint Grid Background */}
+      {/* DARK CLINICAL GRID HERO */}
+      <section className="relative bg-[#061026] text-white overflow-hidden py-14 sm:py-20 border-b border-white/10">
         <div
           className="pointer-events-none absolute inset-0"
           style={{
             backgroundImage:
-              "linear-gradient(to right, rgba(31,79,216,0.14) 1px, transparent 1px), linear-gradient(to bottom, rgba(31,79,216,0.14) 1px, transparent 1px)",
-            backgroundSize: "56px 56px",
+              "linear-gradient(to right, rgba(31,79,216,0.15) 1px, transparent 1px), linear-gradient(to bottom, rgba(31,79,216,0.15) 1px, transparent 1px)",
+            backgroundSize: "52px 52px",
           }}
           aria-hidden="true"
         />
-        {/* Radial Blue Glow */}
         <div
-          className="pointer-events-none absolute right-[8%] top-[15%] w-[440px] h-[440px] rounded-full opacity-40 blur-3xl bg-brand-600"
+          className="pointer-events-none absolute right-[8%] top-[12%] w-96 h-96 rounded-full bg-[#1F4FD8]/35 blur-3xl"
           aria-hidden="true"
         />
 
-        <div className="container relative z-10 grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-12 lg:gap-16 items-center">
-          {/* LEFT COLUMN: DISPLAY HEADLINE */}
+        <div className="container-med relative z-10 grid grid-cols-1 lg:grid-cols-[1.12fr_0.88fr] gap-12 items-center">
           <div className="space-y-6">
-            <h1 className="text-4xl sm:text-5xl lg:text-[3.65rem] font-bold text-white leading-[1.08] tracking-tight m-0">
-              Your flyer.
+            <span className="inline-flex items-center gap-2 rounded-full bg-emerald-400/15 border border-emerald-400/30 px-3.5 py-1 text-xs font-semibold text-emerald-300">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              PHEARTS Track: Health + AI Triage + Interswitch Webpay
+            </span>
+
+            <h1 className="text-4xl sm:text-5xl lg:text-[3.4rem] font-bold text-white leading-[1.08] tracking-tight m-0">
+              AI clinical triage.
               <br />
-              Your{" "}
-              <span className="relative inline-block text-emerald-400">
-                ticket page.
-                <svg
-                  className="pointer-events-none absolute left-0 -bottom-2.5 w-full h-3.5"
-                  viewBox="0 0 320 16"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  aria-hidden="true"
-                >
-                  <path d="M4 12C82 4 215 3 316 10" stroke="#34D399" strokeWidth="4" strokeLinecap="round" />
-                </svg>
+              Instant{" "}
+              <span className="text-emerald-400 underline decoration-emerald-400/60 decoration-4 underline-offset-8">
+                Interswitch
               </span>
               <br />
-              Two clicks.
+              hospital booking.
             </h1>
 
-            <p className="text-slate-400 text-base sm:text-lg leading-relaxed max-w-xl m-0">
-              Upload it. Tap publish. People start buying through the Interswitch Payment Gateway. The money stays protected in escrow until your event happens, and your phone scans every ticket in one beep.
+            <p className="text-slate-300 text-base sm:text-lg leading-relaxed max-w-xl m-0">
+              Stop guessing which hospital queue to join. Describe your symptoms for an instant AI clinical triage assessment, match with the right specialist or diagnostic lab, and pay seamlessly via the Interswitch Payment Gateway (IPG).
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-1">
-              <Link
-                to="/login?mode=register"
-                className="inline-flex items-center justify-center rounded-[6px] bg-brand-600 hover:bg-brand-700 text-white font-semibold px-5 py-3 text-sm no-underline transition"
-              >
-                Create your event
+              <Link to="/triage" className="btn emerald btn-lg">
+                Launch AI Symptom Triage &rarr;
               </Link>
-              <a
-                href="#how"
-                className="inline-flex items-center justify-center rounded-[6px] border border-white/20 bg-white/5 hover:bg-white/10 text-white font-semibold px-5 py-3 text-sm no-underline transition"
-              >
-                See how it works
-              </a>
               <Link
-                to="/events"
-                className="inline-flex items-center justify-center rounded-[6px] border border-white/15 bg-transparent hover:bg-white/5 text-slate-300 hover:text-white font-semibold px-4 py-3 text-sm no-underline transition"
+                to="/specialists"
+                className="inline-flex items-center justify-center rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 text-white font-semibold px-5 py-3 text-sm no-underline transition"
               >
-                Browse events
+                Browse Specialists &amp; Labs
               </Link>
             </div>
 
-            <ul className="flex flex-wrap gap-x-6 gap-y-2 pt-2 text-xs font-medium text-slate-400 list-none p-0 m-0">
-              <li className="inline-flex items-center gap-1.5">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span>Free for free events</span>
-              </li>
-              <li className="inline-flex items-center gap-1.5">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span>12-hour refund cutoff rule</span>
-              </li>
-              <li className="inline-flex items-center gap-1.5">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span>Escrow released after check-in</span>
-              </li>
-            </ul>
+            <div className="pt-2 flex flex-wrap gap-6 text-xs text-slate-400 font-medium">
+              <span>✓ AI Pre-Consultation Triage Notes</span>
+              <span>✓ Live &amp; Test IPG Inline Webpay</span>
+              <span>✓ Instant QR Hospital &amp; Lab Pass</span>
+            </div>
           </div>
 
-          {/* RIGHT COLUMN: TILTED FLYER CARD + FLOATING GLASS TOASTS */}
-          <div className="relative max-w-[400px] w-full mx-auto my-6 py-6 px-3">
-            {/* Top-Right Floating Money / Escrow Toast */}
-            <div className="absolute -top-2 right-0 sm:-right-3 z-20 rotate-3 rounded-xl border border-white/20 bg-[#0F1E3D]/90 backdrop-blur-md px-4 py-3 flex items-center gap-3 shadow-2xl">
-              <div className="w-9 h-9 rounded-full bg-emerald-400/15 border border-emerald-400/40 text-emerald-400 font-bold flex items-center justify-center shrink-0">
-                &#8358;
-              </div>
-              <div className="leading-tight">
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  ESCROW PROTECTED
+          {/* RIGHT INTERACTIVE AI TRIAGE WIDGET CARD */}
+          <div className="rounded-2xl border border-white/15 bg-[#0F1E3D]/95 backdrop-blur-md p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">
+                  LIVE AI TRIAGE ENGINE
                 </span>
-                <strong className="block text-sm text-white">Verified on IPG</strong>
-                <span className="block text-[11px] text-slate-400">From InterPay &bull; Live ledger</span>
+                <strong className="text-base text-white">Quick Symptom &amp; Vitals Check</strong>
               </div>
+              <span className="rounded bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-sky-300">
+                Instant Match
+              </span>
             </div>
 
-            {/* Main Tilted Event Card */}
-            <div className="rounded-2xl border border-white/15 bg-[#0F1E3D] overflow-hidden shadow-[0_28px_60px_rgba(0,0,0,0.55)] -rotate-3 hover:rotate-0 transition duration-300">
-              <div className="relative h-60 w-full overflow-hidden">
-                {heroEvent?.image ? (
-                  <img src={heroEvent.image} alt={heroEvent.title} className="w-full h-full object-cover block" />
-                ) : (
-                  <div
-                    className="w-full h-full"
-                    style={{
-                      background:
-                        "radial-gradient(circle at 20% 20%, #38BDF8 0%, transparent 55%), linear-gradient(135deg, #0B1B3F 0%, #1F4FD8 55%, #0EA5E9 100%)",
-                    }}
+            <div className="flex flex-wrap gap-1.5">
+              {QUICK_SYMPTOM_PRESETS.slice(0, 4).map((p) => (
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={() => {
+                    setQuickSymptoms(p.symptoms);
+                    setQuickTemp(p.temp);
+                    setQuickBp(p.bp);
+                  }}
+                  className="rounded-full bg-white/10 hover:bg-[#1F4FD8] text-slate-200 hover:text-white border border-white/10 px-2.5 py-1 text-[11px] font-semibold cursor-pointer transition"
+                >
+                  + {p.label}
+                </button>
+              ))}
+            </div>
+
+            <form onSubmit={runInstantTriage} className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Patient symptoms
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  value={quickSymptoms}
+                  onChange={(e) => setQuickSymptoms(e.target.value)}
+                  className="bg-[#061026] text-white border-white/15 text-xs sm:text-sm"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                    Temp (°C) optional
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="37.5"
+                    value={quickTemp}
+                    onChange={(e) => setQuickTemp(e.target.value)}
+                    className="bg-[#061026] text-white border-white/15 text-xs"
                   />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-navy/20 to-navy/90" />
-                <div className="absolute bottom-4 left-4 right-4">
-                  <span className="block text-[11px] font-bold uppercase tracking-wider text-sky-200 mb-1">
-                    {heroEvent
-                      ? formatDateTime(heroEvent.start_at, heroEvent.timezone)
-                      : "SAT • IN PERSON & ONLINE"}
-                  </span>
-                  <strong className="block text-lg text-white leading-snug">
-                    {heroEvent ? heroEvent.title : "Tech & Founders Festival in Lagos"}
-                  </strong>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                    Blood Pressure (mmHg)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="120/80"
+                    value={quickBp}
+                    onChange={(e) => setQuickBp(e.target.value)}
+                    className="bg-[#061026] text-white border-white/15 text-xs"
+                  />
                 </div>
               </div>
 
-              <div className="p-4 bg-[#0B1730] space-y-2.5">
-                <div className="flex items-baseline justify-between">
-                  <span className="text-xs text-slate-400">Tickets from</span>
-                  <strong className="text-base text-sky-400">
-                    {heroEvent && heroEvent.from_price_kobo !== null
-                      ? heroEvent.from_price_kobo === 0
-                        ? "Free"
-                        : naira(heroEvent.from_price_kobo)
-                      : naira(1000)}
-                  </strong>
-                </div>
-                <div className="h-1.5 w-full rounded bg-white/10 overflow-hidden">
-                  <div className="h-full w-2/3 rounded bg-emerald-400" />
-                </div>
-                <div className="flex justify-between text-[11px] text-slate-400">
-                  <span>Held in escrow until completion</span>
-                  <span>Instant QR pass</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom-Left Floating Real Ticket Scan Toast */}
-            <div className="absolute bottom-1 left-0 sm:-left-3 z-20 -rotate-2 rounded-xl border border-white/20 bg-[#0F1E3D]/90 backdrop-blur-md px-4 py-2.5 flex items-center gap-3 shadow-2xl">
-              <div className="w-8 h-8 rounded-full bg-emerald-400/15 border border-emerald-400/40 flex items-center justify-center shrink-0">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              </div>
-              <div className="leading-tight">
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-emerald-400">
-                  REAL TICKET
-                </span>
-                <strong className="block text-sm text-white">Signed QR Pass</strong>
-              </div>
-            </div>
+              <button type="submit" className="btn emerald w-full py-3">
+                Analyze Symptoms &amp; Recommend Care &rarr;
+              </button>
+            </form>
           </div>
         </div>
       </section>
 
-      {/* HOW IT WORKS SECTION */}
-      <main>
-        <section id="how" className="py-12 border-b border-brand-100" aria-labelledby="how-heading">
-          <div className="flex flex-wrap items-end justify-between gap-4 mb-7">
-            <div>
-              <span className="block text-xs font-bold uppercase tracking-wider text-brand-600 mb-1">
-                HOW INTERPAY WORKS
-              </span>
-              <h2 id="how-heading" className="m-0">
-                From flyer upload to verified payout
-              </h2>
-            </div>
-            <p className="text-sm text-slate-500 max-w-md m-0">
-              Every ticket purchase is recorded in an auditable kobo ledger from checkout to event completion.
-            </p>
+      {/* FEATURED SPECIALIST CLINICS & DIAGNOSTIC PANELS */}
+      <main className="container-med py-12 space-y-10">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <span className="block text-xs font-bold uppercase tracking-wider text-[#1F4FD8] mb-1">
+              DIRECT INTERSWITCH WEBPAY BOOKING
+            </span>
+            <h2 className="text-2xl font-bold text-[#0B1B3F] m-0">
+              Available Specialist Consultations &amp; Diagnostic Labs
+            </h2>
           </div>
+          <Link to="/specialists" className="btn ghost small">
+            View all {services.length} clinical services &rarr;
+          </Link>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="panel space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xl font-bold text-brand-600">01</span>
-                <Badge>Organiser Control</Badge>
-              </div>
-              <h3>Upload your flyer &amp; set refund rules</h3>
-              <p className="text-xs sm:text-sm text-slate-500 m-0">
-                Publish a clean <code>/event/slug/year</code> page with unlimited ticket categories, physical or online modes, and a single toggle deciding whether attendees can cancel up to 12 hours before start.
-              </p>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {services.map((srv) => (
+            <article key={srv.id} className="panel flex flex-col justify-between gap-4 hover:border-[#1F4FD8] transition">
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="badge">{srv.specialty}</span>
+                  <span className="badge green">
+                    {srv.mode === "TELEMEDICINE"
+                      ? "Telemedicine Video"
+                      : srv.mode === "HYBRID"
+                      ? "In-Clinic & Video"
+                      : "In-Clinic Visit"}
+                  </span>
+                </div>
 
-            <div className="panel space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xl font-bold text-brand-600">02</span>
-                <Badge>Interswitch IPG</Badge>
-              </div>
-              <h3>Buyers pay into protected escrow</h3>
-              <p className="text-xs sm:text-sm text-slate-500 m-0">
-                Attendees pay via card, transfer, OPay, or USSD on the Interswitch Web Checkout. Once verified server-side, a confirmation email with their QR pass arrives right away.
-              </p>
-            </div>
+                <h3 className="text-base font-bold text-[#0B1B3F] m-0 leading-snug">
+                  {srv.title}
+                </h3>
 
-            <div className="panel space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xl font-bold text-brand-600">03</span>
-                <Badge>Automated Settlement</Badge>
-              </div>
-              <h3>Scan tickets &amp; receive your payout</h3>
-              <p className="text-xs sm:text-sm text-slate-500 m-0">
-                Scan QR codes at the door or admit online attendees via personal join links. Once the event completes, held funds are released to your verified bank account.
-              </p>
-            </div>
-          </div>
-        </section>
+                <p className="text-xs text-slate-600 m-0 leading-relaxed">
+                  {srv.description}
+                </p>
 
-        {/* UPCOMING EVENTS DIRECTORY PREVIEW */}
-        <section id="events" className="pt-12" aria-labelledby="up">
-          <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
-            <div>
-              <span className="block text-xs font-bold uppercase tracking-wider text-brand-600 mb-1">
-                LIVE DIRECTORY
-              </span>
-              <h2 id="up" className="mb-1">Upcoming events</h2>
-              <p className="text-xs sm:text-sm text-slate-500 m-0">
-                Select an event to view flyers, venue directions, ticket categories, and cancellation rules.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
-              <input
-                type="search"
-                placeholder="Search events or venue..."
-                aria-label="Search events"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="sm:w-60"
-              />
-              <select
-                aria-label="Filter by attendance mode"
-                value={modeFilter}
-                onChange={(e) => setModeFilter(e.target.value)}
-                className="w-auto"
-              >
-                <option value="ALL">All modes</option>
-                <option value="PHYSICAL">In person</option>
-                <option value="ONLINE">Online</option>
-                <option value="BOTH">Hybrid</option>
-              </select>
-              <Link className="btn ghost small" to="/events">
-                Full directory &rarr;
-              </Link>
-            </div>
-          </div>
-
-          {error && <p role="alert" className="notice error">Could not load events: {error}</p>}
-
-          {filteredEvents && filteredEvents.length === 0 && (
-            <div className="panel bg-brand-50/60 p-6">
-              <h3>No matching events found</h3>
-              <p className="text-sm text-slate-500">
-                {events && events.length === 0
-                  ? "No public events are listed yet. Upload your flyer and publish the first event in minutes."
-                  : "Try clearing your search filter or switching the attendance mode."}
-              </p>
-              <div className="actions mt-3">
-                {search || modeFilter !== "ALL" ? (
-                  <button className="btn ghost small" onClick={() => { setSearch(""); setModeFilter("ALL"); }}>
-                    Reset filters
-                  </button>
-                ) : (
-                  <Link className="btn small" to="/login?mode=register">
-                    Create the first event
-                  </Link>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className="grid">
-            {filteredEvents?.map((e) => (
-              <article className="card" key={e.id}>
-                <Link to={e.canonical_path} className="block no-underline" tabIndex={-1} aria-hidden="true">
-                  {e.image ? (
-                    <img className="pic" src={e.image} alt={`Flyer for ${e.title}`} loading="lazy" />
-                  ) : (
-                    <CategoryArt category={e.category} />
-                  )}
-                </Link>
-                <div className="body">
-                  <div className="flex flex-wrap gap-1.5 mb-1">
-                    <Badge>{MODE_LABEL[e.attendance_mode]}</Badge>
-                    <Badge>{e.category}</Badge>
+                <div className="pt-2 border-t border-slate-100 text-xs text-slate-500 space-y-1">
+                  <div>
+                    <strong className="text-[#0B1B3F]">Specialist / Unit:</strong> {srv.doctorOrUnit}
                   </div>
-                  <Link className="title" to={e.canonical_path}>{e.title}</Link>
-                  <span className="muted small">{formatDateTime(e.start_at, e.timezone)}</span>
-                  <span className="muted small">{e.venue_name ?? "Online event"}</span>
-                  <div className="card-footer">
-                    <strong className="text-sm text-ink">
-                      {e.from_price_kobo !== null
-                        ? e.from_price_kobo === 0
-                          ? "Free"
-                          : `From ${naira(e.from_price_kobo)}`
-                        : "View tickets"}
-                    </strong>
-                    <Link className="btn small" to={e.canonical_path}>
-                      Get tickets
-                    </Link>
+                  <div>
+                    <strong className="text-[#0B1B3F]">Facility:</strong> {srv.hospitalName}
+                  </div>
+                  <div>
+                    <strong className="text-[#0B1B3F]">Duration / Turnaround:</strong> {srv.turnaroundOrDuration}
                   </div>
                 </div>
-              </article>
-            ))}
-          </div>
-        </section>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-between gap-3">
+                <div>
+                  <span className="block text-[10px] font-bold uppercase text-slate-400">
+                    {ipg.demoTenNairaOverride ? "Live Demo Fee (Override)" : "Standard Fee"}
+                  </span>
+                  <strong className="text-base font-bold text-[#1F4FD8]">
+                    {ipg.demoTenNairaOverride
+                      ? "₦10.00"
+                      : formatNairaFromKobo(srv.feeKobo)}
+                  </strong>
+                </div>
+                <Link to={`/checkout/${srv.id}`} className="btn small">
+                  Book &amp; Pay with IPG &rarr;
+                </Link>
+              </div>
+            </article>
+          ))}
+        </div>
       </main>
     </div>
   );

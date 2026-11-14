@@ -1,236 +1,254 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { Link, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { api, getToken, setToken } from "./api";
-import { BrandLogo } from "./ui";
+import { useEffect, useState } from "react";
+import { Link, Route, Routes, useLocation } from "react-router-dom";
+import {
+  HACKATHON_TEAMS,
+  IpgMode,
+  IpgRuntimeSettings,
+  getIpgSettings,
+  saveIpgSettings,
+} from "./ipg";
+import { getPatientBookings } from "./clinicalStore";
 import Home from "./pages/Home";
-import Events from "./pages/Events";
-import EventPage from "./pages/EventPage";
-import TicketPage from "./pages/TicketPage";
-import FindTickets from "./pages/FindTickets";
-import Login from "./pages/Login";
-import Organiser from "./pages/Organiser";
-import ManageEvent from "./pages/ManageEvent";
-import Admin from "./pages/Admin";
-import { Terms, Privacy } from "./pages/Legal";
-import NotFound from "./pages/NotFound";
+import TriagePage from "./pages/TriagePage";
+import SpecialistsPage from "./pages/SpecialistsPage";
+import BookingCheckoutPage from "./pages/BookingCheckoutPage";
+import PatientPassesPage from "./pages/PatientPassesPage";
+import DoctorConsolePage from "./pages/DoctorConsolePage";
 
-export type User = { id: number; email: string; name: string; role: "organiser" | "admin"; approved: boolean };
-type Auth = { user: User | null; ready: boolean; signIn: (token: string, u: User) => void; signOut: () => void };
-const AuthCtx = createContext<Auth>({ user: null, ready: false, signIn: () => {}, signOut: () => {} });
-export const useAuth = () => useContext(AuthCtx);
+export function BrandMark({ dark = false }: { dark?: boolean }) {
+  return (
+    <span className="inline-flex items-center gap-2.5">
+      <img src="/favicon.svg" alt="CareSwitch AI" className="w-8 h-8 block shrink-0" />
+      <span className="font-bold text-xl tracking-tight">
+        <span className={dark ? "text-white" : "text-[#0B1B3F]"}>CareSwitch</span>
+        <span className={dark ? "text-emerald-400" : "text-[#1F4FD8]"}>AI</span>
+      </span>
+    </span>
+  );
+}
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
-  const [ready, setReady] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const nav = useNavigate();
   const location = useLocation();
-
-  useEffect(() => {
-    if (!getToken()) return setReady(true);
-    api<User>("/api/auth/me").then(setUser).catch(() => setToken(null)).finally(() => setReady(true));
-  }, []);
+  const [ipg, setIpg] = useState<IpgRuntimeSettings>(getIpgSettings);
+  const [passCount, setPassCount] = useState<number>(() => getPatientBookings().length);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     setMenuOpen(false);
-    if (location.hash) {
-      const id = location.hash.slice(1);
-      const timer = setTimeout(() => {
-        document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 60);
-      return () => clearTimeout(timer);
-    } else {
-      window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
-    }
-  }, [location.pathname, location.hash]);
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  }, [location.pathname]);
 
-  const auth: Auth = {
-    user,
-    ready,
-    signIn: (t, u) => { setToken(t); setUser(u); },
-    signOut: () => { setToken(null); setUser(null); setMenuOpen(false); nav("/"); },
+  useEffect(() => {
+    const sync = () => {
+      setIpg(getIpgSettings());
+      setPassCount(getPatientBookings().length);
+    };
+    window.addEventListener("ipg-settings-changed", sync);
+    window.addEventListener("clinical-store-updated", sync);
+    return () => {
+      window.removeEventListener("ipg-settings-changed", sync);
+      window.removeEventListener("clinical-store-updated", sync);
+    };
+  }, []);
+
+  const updateIpg = (patch: Partial<IpgRuntimeSettings>) => {
+    const next = { ...ipg, ...patch };
+    setIpg(next);
+    saveIpgSettings(next);
   };
 
-  // Full-bleed layouts that manage their own sidebar or split-screen shell
-  const isCustomShell =
-    location.pathname === "/login" ||
-    location.pathname.startsWith("/organiser") ||
-    location.pathname.startsWith("/admin");
-
-  const isDarkHero = location.pathname === "/";
-  const dashboardPath = user?.role === "admin" ? "/admin" : "/organiser";
-  const dashboardLabel = user?.role === "admin" ? "Admin Console" : "Dashboard";
+  const isActive = (path: string) => location.pathname === path;
 
   return (
-    <AuthCtx.Provider value={auth}>
-      <div className="min-h-dvh flex flex-col bg-white text-ink">
-        {!isCustomShell && (
-          <header
-            className={`sticky top-0 z-50 border-b transition ${
-              isDarkHero
-                ? "bg-[#061026]/95 border-white/10 text-white backdrop-blur-md"
-                : "bg-white/95 border-brand-100 text-ink backdrop-blur-md"
-            }`}
-          >
-            <div className="max-w-[1160px] mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
-              <Link to="/" className="no-underline inline-flex items-center gap-2" aria-label="InterPay home">
-                <BrandLogo size={32} dark={isDarkHero} />
-              </Link>
+    <div className="min-h-dvh flex flex-col">
+      {/* TOP INTERSWITCH IPG ENVIRONMENT & TEAM SELECTOR BAR (FOR LIVE DEMO JUDGES) */}
+      <div className="bg-[#061026] text-slate-200 border-b border-white/10 text-xs">
+        <div className="container-med py-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 font-bold ${
+                ipg.mode === "LIVE"
+                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/40"
+                  : "bg-amber-500/20 text-amber-300 border border-amber-400/40"
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${ipg.mode === "LIVE" ? "bg-emerald-400" : "bg-amber-400"}`} />
+              IPG {ipg.mode} MODE
+            </span>
+            <span className="text-slate-400 hidden sm:inline">
+              Merchant: <strong className="text-white">{ipg.mode === "LIVE" ? "MX153376" : "MX6072"}</strong>
+            </span>
+          </div>
 
-              {/* Desktop Navigation */}
-              <nav className="hidden md:flex items-center gap-7 text-sm font-semibold" aria-label="Main">
-                <Link
-                  to="/events"
-                  className={`no-underline transition ${
-                    isDarkHero ? "text-slate-200 hover:text-white" : "text-ink hover:text-brand-600"
-                  }`}
-                >
-                  Browse events
-                </Link>
-                <Link
-                  to="/#how"
-                  className={`no-underline transition ${
-                    isDarkHero ? "text-slate-200 hover:text-white" : "text-ink hover:text-brand-600"
-                  }`}
-                >
-                  How it works
-                </Link>
-                <Link
-                  to="/find-tickets"
-                  className={`no-underline transition ${
-                    isDarkHero ? "text-slate-200 hover:text-white" : "text-ink hover:text-brand-600"
-                  }`}
-                >
-                  Find my tickets
-                </Link>
-              </nav>
-
-              {/* Desktop Right Actions */}
-              <div className="hidden md:flex items-center gap-2.5">
-                {user ? (
-                  <>
-                    <Link to={dashboardPath} className="btn small">
-                      {dashboardLabel}
-                    </Link>
-                    <button className="btn ghost small" onClick={auth.signOut}>
-                      Sign out
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <Link
-                      to="/login"
-                      className={`text-sm font-semibold px-3 py-1.5 no-underline ${
-                        isDarkHero ? "text-slate-200 hover:text-white" : "text-ink hover:text-brand-600"
-                      }`}
-                    >
-                      Sign in
-                    </Link>
-                    <Link to="/login?mode=register" className="btn small">
-                      Create event
-                    </Link>
-                  </>
-                )}
-              </div>
-
-              {/* Mobile Menu Button */}
-              <button
-                type="button"
-                onClick={() => setMenuOpen(!menuOpen)}
-                aria-label="Toggle menu"
-                className={`md:hidden inline-flex items-center justify-center w-10 h-10 rounded-[6px] border bg-transparent cursor-pointer ${
-                  isDarkHero ? "border-white/20 text-white" : "border-brand-100 text-ink"
-                }`}
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="inline-flex items-center gap-1.5 text-[11px] text-slate-300">
+              <span>Gateway:</span>
+              <select
+                value={ipg.mode}
+                onChange={(e) => updateIpg({ mode: e.target.value as IpgMode })}
+                className="w-auto bg-[#0F1E3D] text-white border-white/20 py-1 px-2 text-xs rounded"
               >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                  {menuOpen ? (
-                    <>
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </>
-                  ) : (
-                    <>
-                      <line x1="3" y1="6" x2="21" y2="6" />
-                      <line x1="3" y1="12" x2="21" y2="12" />
-                      <line x1="3" y1="18" x2="21" y2="18" />
-                    </>
-                  )}
-                </svg>
-              </button>
-            </div>
+                <option value="TEST">TEST (QA Sandbox)</option>
+                <option value="LIVE">LIVE (Production MX153376)</option>
+              </select>
+            </label>
 
-            {/* Mobile Dropdown Drawer */}
-            {menuOpen && (
-              <div className="md:hidden bg-white text-ink border-b-2 border-brand-600 px-4 py-5 space-y-3 shadow-xl">
-                <div className="grid gap-2">
-                  <Link to="/events" className="block px-3 py-2.5 rounded-[6px] border border-brand-100 font-semibold text-sm text-ink no-underline">
-                    Browse events
-                  </Link>
-                  <Link to="/#how" className="block px-3 py-2.5 rounded-[6px] border border-brand-100 font-semibold text-sm text-ink no-underline">
-                    How escrow works
-                  </Link>
-                  <Link to="/find-tickets" className="block px-3 py-2.5 rounded-[6px] border border-brand-100 font-semibold text-sm text-ink no-underline">
-                    Find my tickets
-                  </Link>
-                  {user ? (
-                    <>
-                      <Link to={dashboardPath} className="btn w-full">
-                        {dashboardLabel}
-                      </Link>
-                      <button className="btn ghost w-full" onClick={auth.signOut}>
-                        Sign out
-                      </button>
-                    </>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-2 pt-2">
-                      <Link to="/login" className="btn ghost">
-                        Sign in
-                      </Link>
-                      <Link to="/login?mode=register" className="btn">
-                        Create account
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              </div>
+            {ipg.mode === "LIVE" && (
+              <label className="inline-flex items-center gap-1.5 text-[11px] text-slate-300">
+                <span>Payable:</span>
+                <select
+                  value={ipg.teamNumber}
+                  onChange={(e) => updateIpg({ teamNumber: Number(e.target.value) })}
+                  className="w-auto bg-[#0F1E3D] text-white border-white/20 py-1 px-2 text-xs rounded"
+                >
+                  {HACKATHON_TEAMS.map((t) => (
+                    <option key={t.teamNumber} value={t.teamNumber}>
+                      {t.teamLabel} ({t.payItemId})
+                    </option>
+                  ))}
+                </select>
+              </label>
             )}
-          </header>
-        )}
 
-        <div className="flex-1">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/events" element={<Events />} />
-            <Route path="/event/:slug/:year" element={<EventPage />} />
-            <Route path="/tickets/:token" element={<TicketPage />} />
-            <Route path="/find-tickets" element={<FindTickets />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/organiser" element={<Organiser />} />
-            <Route path="/organiser/events/:id" element={<ManageEvent />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+            <label className="inline-flex items-center gap-1.5 text-[11px] text-emerald-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={ipg.demoTenNairaOverride}
+                onChange={(e) => updateIpg({ demoTenNairaOverride: e.target.checked })}
+                style={{ width: "auto" }}
+              />
+              <span>₦10.00 Demo Price</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {/* MAIN MEDICAL NAVIGATION BAR */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
+        <div className="container-med py-3.5 flex items-center justify-between gap-4">
+          <Link to="/" className="no-underline">
+            <BrandMark />
+          </Link>
+
+          <nav className="hidden md:flex items-center gap-6 text-sm font-semibold" aria-label="Primary">
+            <Link
+              to="/"
+              className={`no-underline transition ${isActive("/") ? "text-[#1F4FD8]" : "text-[#0B1B3F] hover:text-[#1F4FD8]"}`}
+            >
+              Overview
+            </Link>
+            <Link
+              to="/triage"
+              className={`no-underline transition inline-flex items-center gap-1.5 ${
+                isActive("/triage") ? "text-[#16794C]" : "text-[#0B1B3F] hover:text-[#16794C]"
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-[#16794C]" />
+              <span>AI Symptom Triage</span>
+            </Link>
+            <Link
+              to="/specialists"
+              className={`no-underline transition ${
+                isActive("/specialists") ? "text-[#1F4FD8]" : "text-[#0B1B3F] hover:text-[#1F4FD8]"
+              }`}
+            >
+              Specialists &amp; Labs
+            </Link>
+            <Link
+              to="/passes"
+              className={`no-underline transition inline-flex items-center gap-1.5 ${
+                isActive("/passes") ? "text-[#1F4FD8]" : "text-[#0B1B3F] hover:text-[#1F4FD8]"
+              }`}
+            >
+              <span>My Care Passes</span>
+              {passCount > 0 && (
+                <span className="rounded-full bg-[#EEF3FF] text-[#173DB0] border border-[#D9E2F7] px-2 py-0.5 text-xs font-bold">
+                  {passCount}
+                </span>
+              )}
+            </Link>
+            <Link
+              to="/doctor"
+              className={`no-underline transition ${
+                isActive("/doctor") ? "text-[#1F4FD8]" : "text-[#0B1B3F] hover:text-[#1F4FD8]"
+              }`}
+            >
+              Hospital Console
+            </Link>
+          </nav>
+
+          <div className="hidden md:flex items-center gap-2.5">
+            <Link to="/triage" className="btn emerald small">
+              Start AI Triage
+            </Link>
+            <Link to="/specialists" className="btn small">
+              Book Consultation
+            </Link>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="md:hidden rounded-lg border border-slate-200 p-2 text-[#0B1B3F] bg-white cursor-pointer"
+            aria-label="Toggle menu"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
         </div>
 
-        {!isCustomShell && (
-          <footer className="border-t border-brand-100 bg-[#F8FAFF] py-10 px-4 sm:px-6 text-xs text-slate-500">
-            <div className="max-w-[1160px] mx-auto flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <BrandLogo size={24} />
-                <span>InterPay is a hackathon project built on the Interswitch Payment Gateway. It is not an official Interswitch product.</span>
-              </div>
-              <nav className="flex flex-wrap gap-5 font-semibold">
-                <Link to="/events" className="text-slate-600 hover:text-brand-600 no-underline">Events</Link>
-                <Link to="/find-tickets" className="text-slate-600 hover:text-brand-600 no-underline">Find my tickets</Link>
-                <Link to="/terms" className="text-slate-600 hover:text-brand-600 no-underline">Terms</Link>
-                <Link to="/privacy" className="text-slate-600 hover:text-brand-600 no-underline">Privacy Policy</Link>
-              </nav>
-            </div>
-          </footer>
+        {menuOpen && (
+          <div className="md:hidden bg-white border-b-2 border-[#1F4FD8] px-4 py-4 space-y-2 shadow-lg">
+            <Link to="/" className="block px-3 py-2 rounded-lg font-semibold text-sm text-[#0B1B3F] no-underline hover:bg-slate-50">
+              Overview
+            </Link>
+            <Link to="/triage" className="block px-3 py-2 rounded-lg font-semibold text-sm text-[#16794C] bg-emerald-50/60 no-underline">
+              AI Symptom Triage Studio
+            </Link>
+            <Link to="/specialists" className="block px-3 py-2 rounded-lg font-semibold text-sm text-[#0B1B3F] no-underline hover:bg-slate-50">
+              Specialists &amp; Lab Panels
+            </Link>
+            <Link to="/passes" className="block px-3 py-2 rounded-lg font-semibold text-sm text-[#0B1B3F] no-underline hover:bg-slate-50">
+              My Care Passes ({passCount})
+            </Link>
+            <Link to="/doctor" className="block px-3 py-2 rounded-lg font-semibold text-sm text-[#0B1B3F] no-underline hover:bg-slate-50">
+              Hospital &amp; Doctor Console
+            </Link>
+          </div>
         )}
+      </header>
+
+      <div className="flex-1">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/triage" element={<TriagePage />} />
+          <Route path="/specialists" element={<SpecialistsPage />} />
+          <Route path="/checkout/:serviceId" element={<BookingCheckoutPage />} />
+          <Route path="/passes" element={<PatientPassesPage />} />
+          <Route path="/doctor" element={<DoctorConsolePage />} />
+          <Route path="*" element={<Home />} />
+        </Routes>
       </div>
-    </AuthCtx.Provider>
+
+      <footer className="bg-white border-t border-slate-200 py-8 text-xs text-slate-500">
+        <div className="container-med flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <BrandMark />
+            <span>
+              Built for the Interswitch Pan-African Discovery Series Hackathon (PHEARTS: Health, Payment &amp; AI).
+            </span>
+          </div>
+          <div className="flex gap-4 font-semibold">
+            <Link to="/triage" className="text-slate-600 hover:text-[#1F4FD8] no-underline">AI Triage</Link>
+            <Link to="/specialists" className="text-slate-600 hover:text-[#1F4FD8] no-underline">Specialists</Link>
+            <Link to="/passes" className="text-slate-600 hover:text-[#1F4FD8] no-underline">Care Passes</Link>
+            <Link to="/doctor" className="text-slate-600 hover:text-[#1F4FD8] no-underline">Doctor Console</Link>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }
